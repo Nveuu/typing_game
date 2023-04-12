@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 650px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            overflow: hidden;
+        }
+        .word {
+            position: absolute;
+            top: 0;
+            font-size: 18px;
+            background-color: #ffd4d4;
+            padding: 5px 15px 5px 15px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .word .fa-bomb {
+            margin-right: 5px;
+        }
+        #inputBox {
+            width: 250px;
+            margin-top: 50px;
+            height: 55px;
+            font-size: 25px;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            text-align: center;
+        }
+        #inputBox.incorrect {
+            border-bottom: 2px solid red;
+        }
+        #score {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 5px 10px;
+            z-index: 99;
+        }
+        #restart {
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            text-align: center;
+            width: 125px;
+            height: 25px;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<div id="gameArea"></div>
+<input type="text" id="inputBox">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // Add your JavaScript/jQuery code here
+</script>
+</body>
+
+<script>
+$(document).ready(function () {
+    let words = [];
+    let currentWord = "";
+    let points = 0;
+    let isGameOver = false;
+    let fallingSpeed = 10000;
+
+    // Fetch words from the API
+    function fetchWords() {
+        return $.ajax({
+            url: "https://random-word-api.herokuapp.com/word?number=1500",
+            method: "GET",
+        }).then(function (response) {
+            words = response;
+            $("#inputBox").val('');
+            createWord();
+        });
+    }
+
+    function createWord() {
+        if (isGameOver) return;
+
+        const word = words[Math.floor(Math.random() * words.length)];
+        const x = Math.floor(Math.random() * ($("#gameArea").width() - 100));
+        const $wordDiv = $("<div class='word'><i class='fas fa-bomb'></i> " + word + "</div>").css({ "left": x + "px" });
+        $("#gameArea").append($wordDiv);
+        $wordDiv.animate({ "top": $("#gameArea").height() }, fallingSpeed, "linear", function () {
+            if (!isGameOver && $wordDiv.is(":visible")) {
+                gameOver();
+            }
+            $wordDiv.remove();
+        });
+        currentWord = word;
+    }
+
+    function checkWord() {
+        const typedWord = $("#inputBox").val().trim();
+
+        if (typedWord === currentWord) {
+            points++;
+            $("#score").text("Score: " + points);
+            $("#gameArea .word").first().remove();
+            $("#inputBox").removeClass("incorrect").val("");
+            createWord();
+
+            // Increase falling speed by 5%
+            fallingSpeed *= 0.95;
+        } else {
+            $("#inputBox").addClass("incorrect");
+        }
+    }
+
+    function gameOver() {
+        isGameOver = true;
+        alert("Game Over! Your score: " + points);
+        $("#gameArea .word").remove();
+        $('<button id="restart">Restart</button>').insertAfter("#gameArea");
+        $("#restart").on("click", function () {
+            location.reload();
+        });
+    }
+
+    function keepFocusOnInputBox() {
+        if (!isGameOver) {
+            $("#inputBox").focus();
+        }
+    }
+
+    fetchWords();
+    keepFocusOnInputBox();
+
+    $("#inputBox").on("keypress", function (e) {
+        if (e.which === 13) { // Enter key
+            if (!isGameOver) {
+                checkWord();
+            }
+            e.preventDefault(); // Prevent form submission
+        } else {
+            $("#inputBox").removeClass("incorrect");
+        }
+    });
+
+    // Keep the focus on the inputBox
+    $(document).on("click", keepFocusOnInputBox);
+    $(document).on("focusin", keepFocusOnInputBox);
+});
+
+
+</script>
+</html>
